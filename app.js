@@ -1,6 +1,7 @@
 // Constants
 const RPC = "https://fullnode.mainnet.sui.io:443";
 const UPDATE_INTERVAL = 60000; // 60 seconds
+const COINGECKO_API = "https://api.coingecko.com/api/v3";
 
 // Treasury configurations
 const TREASURIES = [
@@ -19,22 +20,25 @@ const TREASURIES = [
     }
 ];
 
-// Token configurations
+// Token configurations with CoinGecko IDs
 const SUINS_TOKENS = [
     {
         type: "0x5145494a5f5100e645e4b0aa950fa6b68f614e8c59e17bc5ded3495123a79178::ns::NS",
         symbol: "NS",
-        logo: "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/suins.svg/public"
+        logo: "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/suins.svg/public",
+        coingeckoId: "suins-token" // Correct CoinGecko ID for SuiNS
     },
     {
         type: "0x2::sui::SUI",
         symbol: "SUI",
-        logo: "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/sui-coin.svg/public"
+        logo: "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/sui-coin.svg/public",
+        coingeckoId: "sui" // CoinGecko ID for SUI
     },
     {
         type: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
         symbol: "USDC",
-        logo: "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/usdc.png/public"
+        logo: "https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/usdc.png/public",
+        coingeckoId: "usd-coin" // CoinGecko ID for USDC
     }
 ];
 
@@ -56,6 +60,17 @@ async function fetchRPC(method, params) {
     } catch (error) {
         console.error(`Error in ${method}:`, error);
         throw error;
+    }
+}
+
+async function fetchCoinGeckoPrices(ids) {
+    try {
+        const response = await fetch(`${COINGECKO_API}/simple/price?ids=${ids.join(',')}&vs_currencies=usd&include_24hr_change=true`);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Error fetching CoinGecko prices:', error);
+        return {};
     }
 }
 
@@ -144,10 +159,35 @@ async function updateAeonBalance(treasury, container) {
     const obj = await fetchObject(treasury.address);
     if (obj?.data?.content?.fields) {
         const balance = obj.data.content.fields.balance;
-        const { display, note } = formatAmount(balance, 9, true);
+        // SUI only, 9 decimals
+        const amount = Number(balance) / 1_000_000_000;
+
+        // Fetch SUI price from CoinGecko
+        const prices = await fetchCoinGeckoPrices(["sui"]);
+        let priceInfo = "";
+        let totalValue = 0;
+        if (prices.sui) {
+            const price = prices.sui.usd;
+            const change24h = prices.sui.usd_24h_change;
+            const priceFormatted = price ? `$${price.toFixed(4)}` : "";
+            const changeFormatted = change24h ? `${change24h > 0 ? '+' : ''}${change24h.toFixed(2)}%` : "";
+            const changeColor = change24h > 0 ? '#22c55e' : change24h < 0 ? '#ef4444' : '#666';
+            priceInfo = `
+                <div class=\"price-info\">
+                    <span class=\"price\">${priceFormatted}</span>
+                    <span class=\"change\" style=\"color: ${changeColor}\">${changeFormatted}</span>
+                </div>
+            `;
+            totalValue = amount * price;
+        }
+
         container.innerHTML = `
-            <div class="balance-row">${display}</div>
-            <div class="balance-note">${note}</div>
+            <div class="balance-row">${amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 }).replace(/\.?0+$/, '')}
+                <img src="https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/sui-coin.svg/public" alt="SUI" class="token-icon">
+            </div>
+            ${priceInfo}
+            <div class="balance-note">AEON only have SUI in treasury</div>
+            <div class="total-value"><b>Total:</b> $${totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
         `;
     } else {
         container.innerHTML = "<div>No tokens</div>";
@@ -244,14 +284,19 @@ async function updateSuinsBalance(treasury, container) {
         console.log(`${token.symbol}: Main=${mainAmount}, Object=${objectAmount}, Total=${totalAmount}`);
     }
     
+    // Fetch prices from CoinGecko
+    const coinIds = SUINS_TOKENS.map(token => token.coingeckoId).filter(id => id);
+    const prices = await fetchCoinGeckoPrices(coinIds);
+    console.log('CoinGecko prices:', prices);
+    
     let html = "";
+    let totalValue = 0;
     
     for (const token of SUINS_TOKENS) {
         const amount = finalBalances[token.type];
         if (amount > 0) {
             let display;
             if (token.symbol === "USDC") {
-                // For USDC, preserve trailing zeros to show 17,980 instead of 17,98
                 display = `${amount.toLocaleString('en-US', { 
                     minimumFractionDigits: 0, 
                     maximumFractionDigits: 3 
@@ -259,7 +304,6 @@ async function updateSuinsBalance(treasury, container) {
                           alt="${token.symbol}" 
                           class="token-icon">`;
             } else {
-                // For other tokens, remove trailing zeros as before
                 display = `${amount.toLocaleString('en-US', { 
                     minimumFractionDigits: 0, 
                     maximumFractionDigits: 6 
@@ -268,12 +312,38 @@ async function updateSuinsBalance(treasury, container) {
                           class="token-icon">`;
             }
             
-            console.log(`Formatted ${token.symbol}:`, display);
+            // Add price information
+            let priceInfo = "";
+            let tokenValue = 0;
+            if (prices[token.coingeckoId]) {
+                const price = prices[token.coingeckoId].usd;
+                const change24h = prices[token.coingeckoId].usd_24h_change;
+                const priceFormatted = price ? `$${price.toFixed(4)}` : "";
+                const changeFormatted = change24h ? `${change24h > 0 ? '+' : ''}${change24h.toFixed(2)}%` : "";
+                const changeColor = change24h > 0 ? '#22c55e' : change24h < 0 ? '#ef4444' : '#666';
+                
+                priceInfo = `
+                    <div class="price-info">
+                        <span class="price">${priceFormatted}</span>
+                        <span class="change" style="color: ${changeColor}">${changeFormatted}</span>
+                    </div>
+                `;
+                // Calculate USD value for this token
+                tokenValue = amount * price;
+                totalValue += tokenValue;
+            }
+            
             html += `
                 <div class="balance-row">${display}</div>
+                ${priceInfo}
                 <div class="balance-note"></div>
             `;
         }
+    }
+    
+    // Add total value line
+    if (totalValue > 0) {
+        html += `<div class="total-value"><b>Total:</b> $${totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>`;
     }
     
     container.innerHTML = html || "<div>No tokens</div>";
