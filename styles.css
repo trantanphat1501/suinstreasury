@@ -91,10 +91,31 @@ body {
     text-align: center;
 }
 
+.price-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin: var(--spacing-sm) 0;
+    font-size: var(--font-size-sm);
+}
+
+.price {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.change {
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
 .balance-note {
     font-size: var(--font-size-md);
     color: var(--secondary-color);
-    margin-top: calc(var(--spacing-sm) * -1);
+    margin-top: 1.5rem;
     margin-bottom: var(--spacing-md);
     text-align: center;
     width: 100%;
@@ -251,5 +272,15 @@ footer a:hover {
         width: 56px;
         height: 56px;
     }
+}
+
+.total-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #222;
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    letter-spacing: 1px;
 }
   
