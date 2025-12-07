@@ -1,57 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="SuiNS Treasury - Track SuiNS and AEON treasury balances">
-  <title>SuiNS Treasury</title>
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SuiNS Treasury Dashboard - Real-time tracking of SuiNS, AEON, and NS Buyback treasury balances">
+    <title>SuiNS Treasury Dashboard</title>
+    <link rel="icon" href="https://img.cryptorank.io/coins/sui_ns1731317379934.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="container">
-    <!-- SuiNS Treasury Section -->
-    <section class="treasury-section" aria-labelledby="suins-title">
-      <img src="https://img.cryptorank.io/coins/sui_ns1731317379934.png" alt="SuiNS Logo" class="logo" width="80" height="80">
-      <h2 id="suins-title">SuiNS Treasury 💰</h2>
-      <div id="suins-balances" aria-live="polite">Loading…</div>
-    </section>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">🌙</button>
+    <main class="container">
+        <section class="treasury-section" aria-labelledby="suins-title">
+            <img src="https://img.cryptorank.io/coins/sui_ns1731317379934.png" alt="SuiNS" class="logo">
+            <h2 id="suins-title">SuiNS Treasury</h2>
+            <div id="suins-balances" aria-live="polite">Loading…</div>
+            <div class="total-box" id="suins-total-box" aria-live="polite">Total: $0.00</div>
+        </section>
 
-    <!-- AEON Treasury Section -->
-    <section class="treasury-section" aria-labelledby="aeon-title">
-      <img src="https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/aeon.webp/public" alt="AEON Logo" class="logo" width="80" height="80">
-      <h2 id="aeon-title">AEON Treasury 💰</h2>
-      <div id="aeon-balances" aria-live="polite">Loading…</div>
-    </section>
+        <section class="treasury-section" aria-labelledby="aeon-title">
+            <img src="https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/aeon.webp/public" alt="AEON" class="logo">
+            <h2 id="aeon-title">AEON Treasury</h2>
+            <div id="aeon-balances" aria-live="polite">Loading…</div>
+            <div class="total-box" id="aeon-total-box" aria-live="polite">Total: $0.00</div>
+        </section>
 
-    <!-- SuiNS Buyback & Burn Section -->
-    <section class="treasury-section" aria-labelledby="buyback-title">
-      <img src="https://i.postimg.cc/YqYhWsh8/suins-burn-logo.png" alt="SuiNS Logo" class="logo" width="80" height="80">
-      <h2 id="buyback-title">$NS Buyback & Burn 🔥</h2>
-      <div id="buyback-balances" aria-live="polite">Soon 🔥</div>
-    </section>
-  </main>
+        <section class="treasury-section" aria-labelledby="buyback-title">
+            <img src="https://suins.io/assets/fire-joypixels-ad5dea8c.gif" alt="Burn" class="logo">
+            <h2 id="buyback-title">Buyback & Burn</h2>
+            <div id="buyback-balances" aria-live="polite">Loading…</div>
+            <div class="total-box" id="buyback-total-box" aria-live="polite">Total: $0.00</div>
+        </section>
+    </main>
 
-  <div id="last-update" class="time" aria-live="polite">Last update: -</div>
-  <div class="update-text">It updates every 60 seconds</div>
+    <div id="last-update" class="time" aria-live="polite">Updating…</div>
+    <div class="update-text">Updates every 3 minutes</div>
 
-  <!-- Social Links -->
-  <nav class="social-buttons" aria-label="Social Links">
-    <a href="https://suins.io" target="_blank" rel="noopener" class="social-btn">Website</a>
-    <a href="https://x.com/SuiNSdapp" target="_blank" rel="noopener" class="social-btn">X</a>
-    <a href="https://discord.gg/suins" target="_blank" rel="noopener" class="social-btn">Discord</a>
-  </nav>
+    <nav class="social-buttons" aria-label="Social Links">
+        <a href="https://suins.io" target="_blank" rel="noopener noreferrer" class="social-btn">Website</a>
+        <a href="https://x.com/SuiNSdapp" target="_blank" rel="noopener noreferrer" class="social-btn">X</a>
+        <a href="https://discord.gg/suins" target="_blank" rel="noopener noreferrer" class="social-btn">Discord</a>
+    </nav>
 
-  <!-- Footer -->
-  <footer>
-    <p>Developed by <a href="https://x.com/williamm168" target="_blank" rel="noopener">William</a></p>
-    <p>SuiNS Community Council Leader</p>
-    <img src="https://img.sm.xyz/0x230a7444db63fd5d57d93a04853cf1d8234622cf4be823516946c8c3278f0e39/" 
-         alt="William's Profile Picture" 
-         class="profile-pic"
-         width="120"
-         height="120">
-  </footer>
+    <footer>
+        <p>Built by William</p>
+        <a href="https://x.com/williamm168" target="_blank" rel="noopener noreferrer" class="follow-btn">Follow me</a>
+        <img src="https://img.sm.xyz/0x230a7444db63fd5d57d93a04853cf1d8234622cf4be823516946c8c3278f0e39/" 
+             alt="William" class="profile-pic">
+    </footer>
 
-  <script src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
