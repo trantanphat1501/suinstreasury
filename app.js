@@ -66,9 +66,9 @@ async function fetchCoinGeckoPrices(ids) {
     try {
         const response = await fetch(`${COINGECKO_API}/simple/price?ids=${ids.join(',')}&vs_currencies=usd`);
         const data = await response.json();
-        if (data["suins-token"]) priceCache.suins = data["suins-token"].usd || 0;
-        if (data["sui"]) priceCache.sui = data["sui"].usd || 0;
-        if (data["usd-coin"]) priceCache.usdc = data["usd-coin"].usd || 0;
+        priceCache.suins = data["suins-token"]?.usd || 0;
+        priceCache.sui = data["sui"]?.usd || 0;
+        priceCache.usdc = data["usd-coin"]?.usd || 0;
         return data;
     } catch (error) {
         return {};
@@ -108,76 +108,11 @@ async function getBurnMetrics() {
             100
         );
         
-        // Parse transactions for today's and yesterday's burn
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        const yesterdayStart = new Date(todayStart);
-        yesterdayStart.setDate(yesterdayStart.getDate() - 1);
-        
-        let todayBurnt = 0;
-        let yesterdayBurnt = 0;
-        const recentTxnsFormatted = [];
-        
-        if (recentTxns?.data) {
-            for (const txn of recentTxns.data) {
-                try {
-                    const txnTime = new Date(txn.timestampMs);
-                    let txnAmount = 0;
-                    
-                    // Try object changes first
-                    if (txn.effects?.objectChanges) {
-                        for (const change of txn.effects.objectChanges) {
-                            if (change.objectType === NS_TOKEN_TYPE && change.content?.fields?.balance) {
-                                txnAmount = Number(change.content.fields.balance) / 1_000_000;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // Fallback to events
-                    if (txnAmount === 0 && txn.effects?.events) {
-                        for (const event of txn.effects.events) {
-                            if (event.type === "0x2::coin::CoinTransfer" && event.parsedJson?.amount) {
-                                if (JSON.stringify(event.parsedJson).includes(NS_TOKEN_TYPE.split("::")[0])) {
-                                    txnAmount = Number(event.parsedJson.amount) / 1_000_000;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Categorize by date
-                    if (txnAmount > 0) {
-                        if (txnTime >= todayStart) {
-                            todayBurnt += txnAmount;
-                        } else if (txnTime >= yesterdayStart) {
-                            yesterdayBurnt += txnAmount;
-                        }
-                        
-                        if (recentTxnsFormatted.length < 5) {
-                            recentTxnsFormatted.push({
-                                amount: txnAmount,
-                                timestamp: txn.timestampMs,
-                                digest: txn.digest
-                            });
-                        }
-                    }
-                } catch (e) {
-                    // Skip unparseable transactions
-                }
-            }
-        }
-        
-        burnDataCache = {
-            totalBurnt: totalBurntAmount,
-            todayBurnt: todayBurnt,
-            yesterdayBurnt: yesterdayBurnt,
-            recentTransactions: recentTxnsFormatted
-        };
+        burnDataCache.totalBurnt = totalBurntAmount;
         
         return burnDataCache;
     } catch (error) {
-        return burnDataCache;
+        return { totalBurnt: 0, todayBurnt: 0, yesterdayBurnt: 0, recentTransactions: [] };
     }
 }
 
@@ -240,54 +175,18 @@ async function updateBalances() {
 }
 
 async function updateBuybackBalance(container) {
-    // Show total burnt immediately (from cache or initial fetch)
-    if (burnDataCache.totalBurnt > 0) {
-        container.innerHTML = `
-            <div class="balance-row">
-                <img src="https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/suins.svg/public" alt="NS" class="token-icon">
-                ${formatNum(burnDataCache.totalBurnt)} NS
-            </div>
-            <div style="font-size: 0.9rem; color: #999; text-align: center;">Loading details...</div>
-        `;
-    }
-    
-    // Now fetch full metrics for complete display
     const burnMetrics = await getBurnMetrics();
-    const nsPrice = priceCache.suins || 0;
+    const nsPrice = priceCache.suins;
     const totalBurntUSD = burnMetrics.totalBurnt * nsPrice;
     const percentOfSupply = (burnMetrics.totalBurnt / NS_TOTAL_SUPPLY) * 100;
     
     totalsCache.buyback = totalBurntUSD;
-    
-    const changePercent = burnMetrics.yesterdayBurnt > 0 
-        ? ((burnMetrics.todayBurnt - burnMetrics.yesterdayBurnt) / burnMetrics.yesterdayBurnt) * 100
-        : burnMetrics.todayBurnt > 0 ? 100 : 0;
-    
-    const changeClass = changePercent > 0 ? 'positive' : changePercent < 0 ? 'negative' : 'neutral';
-    const txnsHtml = burnMetrics.recentTransactions.length > 0 ? `
-        <div class="recent-txns">
-            <h4>Recent Burns</h4>
-            ${burnMetrics.recentTransactions.map(txn => `
-                <div class="txn-item">
-                    <span class="txn-amount">${formatNum(txn.amount)} NS</span>
-                    <span class="txn-value">$${formatNum(txn.amount * nsPrice, 2)}</span>
-                    <span class="txn-time">${new Date(txn.timestamp).toLocaleDateString()}</span>
-                </div>
-            `).join('')}
-        </div>
-    ` : '';
-    
     container.innerHTML = `
         <div class="balance-row">
             <img src="https://imagedelivery.net/cBNDGgkrsEA-b_ixIp9SkQ/suins.svg/public" alt="NS" class="token-icon">
             ${formatNum(burnMetrics.totalBurnt)} NS
         </div>
         <div class="balance-note">${percentOfSupply.toFixed(4)}% of total supply</div>
-        <div class="burn-today">
-            <div><b>Today:</b> ${formatNum(burnMetrics.todayBurnt)} NS</div>
-            <div><span class="change-${changeClass}">${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%</span></div>
-        </div>
-        ${txnsHtml}
     `;
 }
 
@@ -323,6 +222,9 @@ async function updateSuinsBalance(treasury, container) {
     let totalValue = 0;
     let html = "";
     
+    const symbolPrices = { 'NS': priceCache.suins, 'USDC': priceCache.usdc, 'SUI': priceCache.sui };
+    const displayDecimals = { 'NS': 6, 'USDC': 3, 'SUI': 6 };
+    
     for (const token of SUINS_TOKENS) {
         let amount = 0;
         const mainBalance = mainWalletBalances.find(b => b.coinType === token.type);
@@ -339,12 +241,11 @@ async function updateSuinsBalance(treasury, container) {
         }
         
         if (amount > 0) {
-            const price = [priceCache.suins, priceCache.usdc, priceCache.sui][objIdx] || 0;
-            const decimals = token.symbol === "USDC" ? 3 : 6;
+            const price = symbolPrices[token.symbol];
             const assetUsdValue = amount * price;
             
             html += `
-                <div class="balance-row">${formatNum(amount, decimals)}<img src="${token.logo}" alt="${token.symbol}" class="token-icon"></div>
+                <div class="balance-row">${formatNum(amount, displayDecimals[token.symbol])}<img src="${token.logo}" alt="${token.symbol}" class="token-icon"></div>
                 <div class="price-info"><span class="price">$${price.toFixed(4)}</span></div>
                 <div class="asset-value">USD: <b>$${formatNum(assetUsdValue, 2)}</b></div>
             `;
